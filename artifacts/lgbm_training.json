@@ -1,0 +1,41 @@
+{
+  "best_iteration": 124,
+  "valid": {
+    "auc": 0.8350192184386284,
+    "pr_auc": 0.4200322188099125,
+    "logloss": 0.24166019203036013
+  },
+  "sample_pct": 20,
+  "feature_importance_gain": {
+    "up_last5_rate": 0.2907,
+    "up_last5": 0.191,
+    "up_rate_since_first": 0.1075,
+    "up_days_since_last": 0.0703,
+    "aisle_id": 0.0667,
+    "up_orders_since_last": 0.0592,
+    "up_order_rate": 0.046,
+    "p_repeat_user_share": 0.0289,
+    "t_days_since_last": 0.0173,
+    "up_orders": 0.0143,
+    "u_reorder_ratio": 0.014,
+    "up_avg_interval": 0.014,
+    "p_reorder_rate": 0.0109,
+    "u_distinct_ratio": 0.0096,
+    "u_avg_gap": 0.0061,
+    "u_avg_basket": 0.006,
+    "u_n_distinct": 0.0055,
+    "p_purchases": 0.0053,
+    "p_avg_buys_per_user": 0.005,
+    "p_users": 0.0045,
+    "u_avg_hour": 0.0038,
+    "up_avg_cart_pos": 0.0037,
+    "u_std_gap": 0.0035,
+    "u_n_orders": 0.003,
+    "ud_share": 0.0028,
+    "p_avg_cart_pos": 0.0027,
+    "ua_share": 0.0025,
+    "t_hour": 0.0024,
+    "t_dow": 0.0016,
+    "department_id": 0.0014
+  }
+}

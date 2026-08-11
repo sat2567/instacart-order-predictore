@@ -1,0 +1,68 @@
+{
+  "row_counts": {
+    "raw.aisles": 134,
+    "raw.departments": 21,
+    "raw.products": 49688,
+    "raw.orders": 3421083,
+    "raw.order_products_prior": 32434489,
+    "raw.order_products_train": 1384617
+  },
+  "benchmark": [
+    {
+      "query": "user_order_history",
+      "before_ms": 1725.27,
+      "after_ms": 0.275,
+      "speedup": 6273.7,
+      "plan_before": [
+        "Seq Scan on orders",
+        "Seq Scan on order_products_prior",
+        "Seq Scan on orders",
+        "Seq Scan on products"
+      ],
+      "plan_after": [
+        "Index Scan on orders",
+        "Index Scan on orders",
+        "Index Scan on order_products_prior",
+        "Index Scan on products"
+      ]
+    },
+    {
+      "query": "single_order_basket",
+      "before_ms": 597.32,
+      "after_ms": 0.019,
+      "speedup": 31437.8,
+      "plan_before": [
+        "Seq Scan on order_products_prior"
+      ],
+      "plan_after": [
+        "Index Scan on order_products_prior"
+      ]
+    },
+    {
+      "query": "user_reorder_rate",
+      "before_ms": 1573.39,
+      "after_ms": 0.125,
+      "speedup": 12587.1,
+      "plan_before": [
+        "Seq Scan on order_products_prior",
+        "Seq Scan on orders"
+      ],
+      "plan_after": [
+        "Index Scan on orders",
+        "Index Scan on order_products_prior"
+      ]
+    }
+  ],
+  "serving_query": {
+    "ms": 10.969,
+    "plan": [
+      "Index Scan on user_features",
+      "Index Scan on target_orders",
+      "Index Scan on user_recent_gaps",
+      "Seq Scan on product_features",
+      "Index Scan on up_features",
+      "Index Scan on user_aisle",
+      "Index Scan on user_department"
+    ]
+  }
+}
