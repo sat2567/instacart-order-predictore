@@ -65,6 +65,9 @@ Serving: one `/predict` call = indexed fetch of the user's candidates (~9 ms in 
 - **Metrics that match the product**: pair-level (AUC, PR-AUC, log-loss) and user-level (basket F1 with a threshold tuned on validation, Precision/Recall/NDCG/Hit-rate @10). Users are split 70/10/20 by hash — no user leaks across splits.
 
 ### FastAPI — `src/reorder/api/`
+
+A one-page front-end (`api/static/index.html`, plain HTML/CSS/JS, self-hosted fonts) is served at `/`: pick a customer, see their last 5 orders and the predicted basket drawn as a receipt, with the model's cut-off as the tear line. It calls the endpoints below.
+
 | Endpoint | What it does |
 |---|---|
 | `POST /predict` | `{user_id, k, model, [days_since_last, order_dow, order_hour]}` → top-k products with probabilities and whether each is in the predicted basket. Optional fields let you ask "what if they order on Sunday morning?" |
@@ -87,7 +90,8 @@ cp .env.example .env          # optional: USER_SAMPLE_PCT=20 for laptops with <8
 docker compose up --build     # downloads data, builds features, trains, serves
 # first run: ~30-60 min depending on machine; later runs reuse everything
 
-open http://localhost:8000/docs
+open http://localhost:8000/        # front-end: pick a customer, see the predicted basket
+open http://localhost:8000/docs    # API docs
 make demo                     # predict for a random held-out user
 ```
 

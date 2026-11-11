@@ -96,3 +96,10 @@ def test_history_groups_orders(client):
 
 def test_history_unknown_user(client):
     assert client.get("/users/999/history").status_code == 404
+
+
+def test_home_page_served(client):
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
+    assert "Buy it again" in r.text

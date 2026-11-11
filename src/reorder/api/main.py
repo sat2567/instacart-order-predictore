@@ -1,6 +1,7 @@
 """FastAPI service: "what will this user reorder next?"
 
 Run locally:  uvicorn reorder.api.main:app --reload
+Front-end:    http://localhost:8000/
 Docs:         http://localhost:8000/docs
 """
 from __future__ import annotations
@@ -9,15 +10,19 @@ import logging
 import time
 from contextlib import asynccontextmanager
 from itertools import groupby
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from .. import __version__, config
 from .repository import Repository
 from .schemas import HealthResponse, HistoryResponse, PredictRequest, PredictResponse, ProductScore
 from .scorer import Scorer
 
+STATIC_DIR = Path(__file__).parent / "static"
 log = logging.getLogger("reorder.api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
@@ -38,6 +43,15 @@ app = FastAPI(
     description="Predicts which previously bought products a user will reorder in their next order.",
     lifespan=lifespan,
 )
+
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.get("/", include_in_schema=False)
+def home():
+    """The front-end: a single page that calls the endpoints below."""
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 def get_repo(request: Request) -> Repository:

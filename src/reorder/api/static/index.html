@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buy it again · Reorder predictor</title>
+<style>
+  /* Self-hosted fonts (SIL Open Font License, see static/fonts/) */
+  @font-face { font-family: "Bricolage Grotesque"; font-weight: 500; font-display: swap; src: url(/static/fonts/bricolage-grotesque-latin-500-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Bricolage Grotesque"; font-weight: 700; font-display: swap; src: url(/static/fonts/bricolage-grotesque-latin-700-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Bricolage Grotesque"; font-weight: 800; font-display: swap; src: url(/static/fonts/bricolage-grotesque-latin-800-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Instrument Sans"; font-weight: 400; font-display: swap; src: url(/static/fonts/instrument-sans-latin-400-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Instrument Sans"; font-weight: 500; font-display: swap; src: url(/static/fonts/instrument-sans-latin-500-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Instrument Sans"; font-weight: 600; font-display: swap; src: url(/static/fonts/instrument-sans-latin-600-normal.woff2) format("woff2"); }
+  :root {
+    --paper: #F4F7F1;      /* page */
+    --ink: #16261C;        /* text */
+    --ink-soft: #4F6255;   /* secondary text */
+    --leaf: #2E7D4F;       /* in the basket */
+    --leaf-tint: #DCEBDF;
+    --sage: #B9C7B5;       /* lines, below the cut */
+    --receipt: #FFFFFF;
+    --butter: #F3D35B;     /* one highlight */
+    --danger: #A33B2B;
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.5 var(--body);
+    font-variant-numeric: tabular-nums;
+  }
+  a { color: var(--leaf); }
+  :focus-visible { outline: 3px solid var(--butter); outline-offset: 2px; border-radius: 4px; }
+
+  .page { max-width: 1120px; margin: 0 auto; padding: 32px 20px 56px; }
+
+  /* ---------- header ---------- */
+  header.top { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  header.top h1 {
+    font: 800 clamp(2.4rem, 5vw, 3.6rem)/1 var(--display);
+    letter-spacing: -0.03em; margin: 0;
+  }
+  header.top p { margin: 8px 0 0; color: var(--ink-soft); max-width: 60ch; }
+  header.top nav { display: flex; gap: 18px; font-size: 0.95rem; }
+
+  /* ---------- controls ---------- */
+  form.controls {
+    margin: 28px 0 24px; padding: 16px 0;
+    border-top: 2px solid var(--ink); border-bottom: 1px solid var(--sage);
+    display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: end;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 0.85rem; color: var(--ink-soft); }
+  input[type=number], select {
+    font: 600 1.05rem var(--body); color: var(--ink);
+    background: var(--receipt); border: 1.5px solid var(--sage); border-radius: 8px;
+    padding: 8px 10px; min-width: 0;
+  }
+  input[type=number] { width: 9ch; }
+  .slider-row { display: flex; align-items: center; gap: 10px; }
+  input[type=range] { accent-color: var(--leaf); width: 170px; }
+  .slider-val { font-weight: 600; min-width: 8ch; }
+  button {
+    font: 600 1rem var(--body); cursor: pointer; border-radius: 8px; padding: 9px 16px;
+    border: 1.5px solid var(--ink); background: var(--ink); color: var(--paper);
+  }
+  button.quiet { background: transparent; color: var(--ink); }
+  button.link { border: 0; background: none; color: var(--leaf); padding: 0; text-decoration: underline; font-weight: 500; font-size: 0.85rem; }
+  button:disabled { opacity: 0.5; cursor: progress; }
+
+  /* ---------- main grid ---------- */
+  main.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: 40px; align-items: start; }
+  @media (max-width: 860px) { main.grid { grid-template-columns: 1fr; } .receipt-col { order: -1; } }
+
+  h2 { font: 700 1.35rem/1.2 var(--display); margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-soft); margin: 0 0 16px; font-size: 0.95rem; }
+
+  /* past orders */
+  .orders { list-style: none; margin: 0; padding: 0; }
+  .order { padding: 14px 0; border-top: 1px solid var(--sage); }
+  .order-head { display: flex; justify-content: space-between; gap: 12px; font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 8px; }
+  .order-head strong { color: var(--ink); font: 700 1rem var(--display); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 0.85rem; padding: 3px 9px; border-radius: 999px;
+    background: var(--receipt); border: 1px solid var(--sage); color: var(--ink);
+  }
+  .chip.hit { background: var(--leaf-tint); border-color: var(--leaf); }
+  .legend { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--ink-soft); margin: -6px 0 12px; }
+  .legend .chip { pointer-events: none; }
+
+  /* ---------- the receipt (the one memorable thing) ---------- */
+  .receipt {
+    background: var(--receipt); padding: 22px 22px 18px; position: relative;
+    box-shadow: 0 1px 0 var(--sage), 0 18px 30px -24px rgba(22, 38, 28, 0.45);
+    /* torn bottom edge */
+    -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - 10px) no-repeat,
+                  conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 10px repeat-x;
+            mask: linear-gradient(#000 0 0) top / 100% calc(100% - 10px) no-repeat,
+                  conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 10px repeat-x;
+    padding-bottom: 30px;
+  }
+  .receipt.printing { animation: print 520ms cubic-bezier(.2,.8,.2,1); transform-origin: top; }
+  @keyframes print { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+  @media (prefers-reduced-motion: reduce) { .receipt.printing { animation: none; } }
+
+  .r-head { text-align: center; padding-bottom: 12px; border-bottom: 1.5px dashed var(--sage); margin-bottom: 10px; }
+  .r-head h2 { font-size: 1.5rem; }
+  .r-head .sub { margin: 2px 0 0; }
+
+  .line { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 7px 0; }
+  .line .name { font: 600 1rem/1.25 var(--display); }
+  .line .meta { grid-column: 1; font-size: 0.8rem; color: var(--ink-soft); }
+  .line .pct { grid-row: 1 / span 2; grid-column: 2; align-self: center; font: 700 1.1rem var(--display); color: var(--leaf); }
+  .bar { grid-column: 1 / -1; height: 4px; background: var(--paper); border-radius: 2px; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--leaf); }
+  .line.out .name, .line.out .pct { color: var(--ink-soft); font-weight: 500; }
+  .line.out .bar span { background: var(--sage); }
+
+  .tear {
+    display: flex; align-items: center; gap: 10px; margin: 10px 0; color: var(--ink-soft); font-size: 0.82rem;
+  }
+  .tear::before, .tear::after { content: ""; flex: 1; border-top: 2px dashed var(--ink); }
+  .tear b { color: var(--ink); }
+
+  .totals { border-top: 1.5px dashed var(--sage); margin-top: 12px; padding-top: 10px; font-size: 0.9rem; }
+  .totals div { display: flex; justify-content: space-between; }
+  .totals div + div { margin-top: 2px; }
+  .totals .big { font: 700 1.05rem var(--display); }
+  .more { margin-top: 6px; }
+
+  .empty, .error { padding: 28px 0; color: var(--ink-soft); }
+  .error { color: var(--danger); }
+
+  footer.how { margin-top: 56px; padding-top: 18px; border-top: 2px solid var(--ink); display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; font-size: 0.92rem; color: var(--ink-soft); }
+  footer.how h3 { font: 700 1rem var(--display); color: var(--ink); margin: 0 0 4px; }
+  footer.how p { margin: 0; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div>
+      <h1>Buy it again</h1>
+      <p>Pick an Instacart customer. The model reads their past orders and predicts which items go in their next basket.</p>
+    </div>
+    <nav aria-label="Developer links">
+      <a href="/docs">API docs</a>
+      <a href="/model-info">Model info</a>
+    </nav>
+  </header>
+
+  <form class="controls" id="controls">
+    <div class="field">
+      <label for="uid">Customer ID</label>
+      <input id="uid" type="number" min="1" value="4242" required>
+    </div>
+    <button type="submit" id="go">Predict basket</button>
+    <button type="button" class="quiet" id="random">Random customer</button>
+    <div class="field">
+      <label for="model">Model</label>
+      <select id="model">
+        <option value="ensemble">Ensemble (best)</option>
+        <option value="lightgbm">LightGBM</option>
+        <option value="neural_net">Neural net (GRU)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="days">Days since last order <button type="button" class="link" id="reset-days">use actual</button></label>
+      <div class="slider-row">
+        <input id="days" type="range" min="0" max="30" step="1" value="7" aria-describedby="days-val">
+        <span class="slider-val" id="days-val">as in data</span>
+      </div>
+    </div>
+  </form>
+
+  <main class="grid">
+    <section aria-labelledby="hist-title">
+      <h2 id="hist-title">What they bought before</h2>
+      <p class="sub" id="hist-sub">Their 5 most recent orders.</p>
+      <div class="legend" id="legend" hidden><span class="chip hit">Green</span> one of the model's top 5 picks</div>
+      <div id="history"><p class="empty">Enter a customer ID and press Predict basket.</p></div>
+    </section>
+
+    <section class="receipt-col" aria-labelledby="r-title" aria-live="polite">
+      <div class="receipt" id="receipt">
+        <div class="r-head">
+          <h2 id="r-title">Next basket</h2>
+          <p class="sub" id="r-sub">Predicted from purchase history</p>
+        </div>
+        <div id="lines"><p class="empty">No customer loaded yet.</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="how">
+    <div><h3>The data</h3><p>3.4M real Instacart orders from 206k customers, stored in Postgres. Every feature is computed in SQL.</p></div>
+    <div><h3>The models</h3><p>LightGBM and a PyTorch GRU that reads the last 20 orders; the ensemble averages both. Test AUC 0.833.</p></div>
+    <div><h3>The cut-off</h3><p>Items above the dashed line clear the model's tuned threshold and go in the basket. The rest are less likely reorders.</p></div>
+  </footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let useActualDays = true;
+const SHOW_BELOW = 6;   // how many below-the-cut items to show before "show more"
+
+function el(tag, attrs = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v; else if (k === "text") n.textContent = v; else n.setAttribute(k, v);
+  }
+  kids.flat().forEach((c) => c != null && n.append(c));
+  return n;
+}
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (!r.ok) {
+    let msg = `Request failed (${r.status}).`;
+    try { const j = await r.json(); if (j.detail) msg = typeof j.detail === "string" ? j.detail : "Check the inputs."; } catch {}
+    throw new Error(msg);
+  }
+  return r.json();
+}
+
+function fmtHour(h) { return `${String(h).padStart(2, "0")}:00`; }
+function pct(p) { return `${Math.round(p * 100)}%`; }
+
+function renderLine(p) {
+  const bar = el("div", { class: "bar" }, el("span"));
+  bar.firstChild.style.width = `${Math.max(2, p.probability * 100)}%`;
+  return el("div", { class: "line" + (p.in_predicted_basket ? "" : " out") },
+    el("div", { class: "name", text: p.product_name }),
+    el("div", { class: "pct", text: pct(p.probability) }),
+    el("div", { class: "meta", text: `${p.aisle} · ${p.department}` }),
+    bar);
+}
+
+function renderReceipt(res) {
+  const inB = res.products.filter((p) => p.in_predicted_basket);
+  const out = res.products.filter((p) => !p.in_predicted_basket);
+  const box = $("lines"); box.replaceChildren();
+  $("r-sub").textContent = `Customer ${res.user_id} · ${modelName(res.model)}`;
+
+  if (inB.length === 0) box.append(el("p", { class: "empty", text: "No item clears the cut-off for this customer. The most likely ones are below." }));
+  inB.forEach((p) => box.append(renderLine(p)));
+  box.append(el("div", { class: "tear", role: "separator" },
+    el("span", {}, "cut-off ", el("b", { text: pct(res.threshold) }))));
+
+  const shown = out.slice(0, SHOW_BELOW), hidden = out.slice(SHOW_BELOW);
+  shown.forEach((p) => box.append(renderLine(p)));
+  if (hidden.length) {
+    const more = el("button", { type: "button", class: "link more", text: `Show ${hidden.length} more` });
+    more.onclick = () => { hidden.forEach((p) => more.before(renderLine(p))); more.remove(); };
+    box.append(more);
+  }
+  const notReturned = res.candidates_scored - res.products.length;
+  box.append(el("div", { class: "totals" },
+    el("div", { class: "big" }, el("span", { text: "Items in basket" }), el("span", { text: String(res.predicted_basket_size) })),
+    el("div", {}, el("span", { text: "Expected reorders" }), el("span", { text: res.expected_reorders.toFixed(1) })),
+    el("div", {}, el("span", { text: "Past products scored" }), el("span", { text: String(res.candidates_scored) + (notReturned > 0 ? ` (top ${res.products.length} shown)` : "") })),
+    el("div", {}, el("span", { text: "Answered in" }), el("span", { text: `${Math.round(res.latency_ms)} ms` }))));
+
+  const r = $("receipt"); r.classList.remove("printing"); void r.offsetWidth; r.classList.add("printing");
+  return new Set(res.products.slice(0, 5).map((p) => p.product_id));   // top 5 picks, traced in the history
+}
+
+function renderHistory(h, hits) {
+  const box = $("history"); box.replaceChildren();
+  const ul = el("ul", { class: "orders" });
+  h.orders.forEach((o) => {
+    const when = o.days_since_prior_order == null ? "first order" : `${o.days_since_prior_order} days after the previous`;
+    ul.append(el("li", { class: "order" },
+      el("div", { class: "order-head" },
+        el("strong", { text: `Order ${o.order_number}` }),
+        el("span", { text: `${o.items.length} items · ${when} · ${fmtHour(o.order_hour_of_day)}` })),
+      el("div", { class: "chips" },
+        o.items.map((i) => el("span", { class: "chip" + (hits.has(i.product_id) ? " hit" : ""), text: i.product_name })))));
+  });
+  box.append(ul);
+  $("legend").hidden = hits.size === 0;
+  $("hist-sub").textContent = `Their ${h.orders.length} most recent orders, newest first.`;
+}
+
+function modelName(m) { return { ensemble: "Ensemble", lightgbm: "LightGBM", neural_net: "Neural net" }[m] || m; }
+
+function showError(msg) {
+  $("lines").replaceChildren(el("p", { class: "error", text: msg }));
+  $("history").replaceChildren(el("p", { class: "error", text: "Try another ID, or press Random customer." }));
+  $("legend").hidden = true;
+}
+
+async function predict() {
+  const uid = Number($("uid").value);
+  if (!uid || uid < 1) { showError("Enter a customer ID of 1 or more."); return; }
+  const body = { user_id: uid, k: 40, model: $("model").value };
+  if (!useActualDays) body.days_since_last = Number($("days").value);
+  $("go").disabled = true;
+  try {
+    const [res, hist] = await Promise.all([
+      api("/predict", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
+      api(`/users/${uid}/history?n_orders=5`),
+    ]);
+    renderHistory(hist, renderReceipt(res));
+    history.replaceState(null, "", `?user=${uid}`);
+  } catch (e) {
+    showError(e.message.includes("not found") ? `Customer ${uid} has no order history. Try another ID.` : e.message);
+  } finally { $("go").disabled = false; }
+}
+
+$("controls").addEventListener("submit", (e) => { e.preventDefault(); predict(); });
+$("model").addEventListener("change", predict);
+$("days").addEventListener("input", () => { useActualDays = false; $("days-val").textContent = $("days").value === "30" ? "30+ days" : `${$("days").value} days`; });
+$("days").addEventListener("change", predict);
+$("reset-days").addEventListener("click", () => { useActualDays = true; $("days-val").textContent = "as in data"; predict(); });
+$("random").addEventListener("click", async () => {
+  try { const [u] = await api("/users/sample?n=1"); $("uid").value = u.user_id; predict(); }
+  catch (e) { showError(e.message); }
+});
+
+const fromUrl = new URLSearchParams(location.search).get("user");
+if (fromUrl) $("uid").value = fromUrl;
+predict();
+</script>
+</body>
+</html>
